@@ -7,7 +7,7 @@ const App = () => {
 	/*
   * Just a state variable we use to store our user's public wallet.
   */
-	const [currentAccount, setCurrentAccount] = useState('');
+	const [currentAccount, setCurrentAccount] = useState('')
   let [totalCount, setTotalCount] = useState(0);
   let [totalCountForAddress, setTotalCountForAddress] = useState(0);
   const [displayCount, setDisplayCount] = useState(false);
