@@ -14,11 +14,12 @@ const App = () => {
   const [displayhash, setDisplayHash] = useState(false);
   const [displayAddressCount, setDisplayAddressCount] = useState(false);
   const [url, setUrl] = useState("https://rinkeby.etherscan.io/tx/")
+  const [allWaves, setAllWaves] = useState([]);
   
 	/**
 	 * Create a variable here that holds the contract address after you deploy!
 	 */
-   const contractAddress = "0xe73E85EB0b6a42Cff7aEd0b2C61bd8303766dC66";
+   const contractAddress = "0x0698e998da4b38976A3Ee07fec8B074EA35ff919";
                           
 	/**
 	 * Create a variable here that references the abi content!
@@ -80,12 +81,12 @@ const App = () => {
 	};
 
   const displayCounts = () => {
-    wave();
+    wave("Blockchain dev...awa re!!!");
     setDisplayCount(true)
   }
 
 	//getting the number of waves
-	const wave = async () => {
+	const wave = async (message) => {
 		try {
 			const { ethereum } = window;
 
@@ -105,7 +106,7 @@ const App = () => {
 				/*
         * Execute the actual wave from your smart contract
         */
-				const waveTxn = await wavePortalContract.wave(currentAccount);
+				const waveTxn = await wavePortalContract.wave(currentAccount, message, { gasLimit: 300000 });
 				console.log('Mining...', waveTxn.hash);
         let trxHash = waveTxn.hash
         setUrl(url + trxHash)
@@ -133,12 +134,67 @@ const App = () => {
 		}
 	};
 
+  const getAllWaves = async () => {
+  const { ethereum } = window;
+
+  try {
+    if (ethereum) {
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      const wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
+      const waves = await wavePortalContract.getAllWaves();
+
+      const wavesCleaned = waves.map(wave => {
+        return {
+          address: wave.waver,
+          timestamp: new Date(wave.timestamp * 1000),
+          message: wave.message,
+        };
+      });
+
+      setAllWaves(wavesCleaned);
+    } else {
+      console.log("Ethereum object doesn't exist!");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
 	/*
   * This runs our function when the page loads.
   */
-	useEffect(() => {
-		checkIfWalletIsConnected();
-	}, []);
+/**
+ * Listen in for emitter events!
+ */
+useEffect(() => {
+  let wavePortalContract;
+
+  const onNewWave = (from, timestamp, message) => {
+    console.log("NewWave", from, timestamp, message);
+    setAllWaves(prevState => [
+      ...prevState,
+      {
+        address: from,
+        timestamp: new Date(timestamp * 1000),
+        message: message,
+      },
+    ]);
+  };
+
+  if (window.ethereum) {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
+    wavePortalContract.on("NewWave", onNewWave);
+  }
+
+  return () => {
+    if (wavePortalContract) {
+      wavePortalContract.off("NewWave", onNewWave);
+    }
+  };
+}, []);
 
 	return (
 		<div className="mainContainer">
@@ -170,6 +226,15 @@ const App = () => {
   				</button>
           )
         }
+
+        {allWaves.map((wave, index) => {
+          return (
+            <div key={index} style={{ backgroundColor: "OldLace", marginTop: "16px", padding: "8px" }}>
+              <div>Address: {wave.address}</div>
+              <div>Time: {wave.timestamp.toString()}</div>
+              <div>Message: {wave.message}</div>
+            </div>)
+        })}
           
         {
           displayhash && (
